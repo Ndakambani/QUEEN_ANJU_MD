@@ -1,20 +1,44 @@
-FROM node:lts-buster
+name: Node.js CI
 
-RUN apt-get update && \
-  apt-get install -y \
-  ffmpeg \
-  imagemagick \
-  webp && \
-  apt-get upgrade -y && \
-  rm -rf /var/lib/apt/lists/*
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 */6 * * *'  # Relance toutes les 6 heures
 
-COPY package.json .
+jobs:
+  build:
 
-RUN npm install
+    runs-on: ubuntu-latest
 
-COPY . .
+    strategy:
+      matrix:
+        node-version: [20.x]
 
-EXPOSE 8000
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-CMD ["node", "queen.js"]
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Install FFmpeg
+      run: sudo apt-get install -y ffmpeg
+
+    - name: Start application with timeout
+      run: |
+        timeout 21590s npm start  # Limite l'exécution à 5h 59m 50s
+
+    - name: Save state (Optional)
+      run: |
+        ./save_state.sh
 
